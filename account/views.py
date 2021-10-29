@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from rest_framework import generics
 
 from account.models import Role
-from account.permissions import IsAdmin, IsOwner, IsAdminOrOwner
+from account.permissions import IsAdmin, IsOwner, IsAdminOrOwner, IsDeveloper
 from account.serializers import RoleListSerializer, UserListSerializer, ClientUpdateSerializer, \
     NotaryDetailSerializer, ClientSerializer
 
@@ -47,19 +47,10 @@ class ClientViewSet(viewsets.ModelViewSet):
             permission_classes = [IsAdminOrOwner]
         return [permission() for permission in permission_classes]
 
-# class ClientListView(generics.ListAPIView):
-#     """Вывод списка клиентов"""
-#     queryset = User.objects.filter(role__name='клиент')
-#     serializer_class = UserListSerializer
-#
-#
-# class ClientDetailView(generics.RetrieveAPIView):
-#     """Вывод полной информации о клиенте"""
-#     queryset = User.objects.filter(role__name='клиент')
-#     serializer_class = ClientDetailSerializer
-
 
 class NotaryViewSet(viewsets.ViewSet):
+
+    permission_classes = [IsAdmin]
 
     @swagger_auto_schema(tags=['notary'])
     def list(self, request):
@@ -81,6 +72,7 @@ class NotaryViewSet(viewsets.ViewSet):
 @method_decorator(name='patch', decorator=swagger_auto_schema(tags=['notary']))
 class NotaryUpdateView(generics.UpdateAPIView):
     """Редактирование нотариуса"""
+    permission_classes = [IsAdmin]
     queryset = User.objects.filter(role__name='нотариус')
     serializer_class = NotaryDetailSerializer
 
@@ -88,16 +80,20 @@ class NotaryUpdateView(generics.UpdateAPIView):
 @method_decorator(name='delete', decorator=swagger_auto_schema(tags=['notary']))
 class NotaryDestroyView(generics.DestroyAPIView):
     """Удаление нотариуса"""
+    permission_classes = [IsAdmin]
     queryset = User.objects.filter(role__name='нотариус')
     serializer_class = NotaryDetailSerializer
 
 
-@method_decorator(name='update', decorator=swagger_auto_schema(tags=['user']))
-@method_decorator(name='partial_update', decorator=swagger_auto_schema(tags=['user']))
-@method_decorator(name='list', decorator=swagger_auto_schema(tags=['user']))
-@method_decorator(name='retrieve', decorator=swagger_auto_schema(tags=['user']))
-@method_decorator(name='destroy', decorator=swagger_auto_schema(tags=['user']))
 class DeveloperViewSet(viewsets.ModelViewSet):
+    view_tags = ['developer']
+
+    def get_permissions(self):
+        if self.action == 'list':
+            permission_classes = [IsAdmin]
+        if self.action in ['update', 'partial_update', 'retrieve', 'destroy']:
+            permission_classes = [IsAdminOrOwner]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         return User.objects.filter(role__name='застройщик')
