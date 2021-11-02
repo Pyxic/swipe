@@ -78,6 +78,8 @@ class ResidentialComplex(models.Model):
     appointment = models.CharField("Назначение", max_length=30, null=True)
     contract_amount = models.CharField("Неполная", max_length=30, null=True)
     address = models.CharField("Адрес", max_length=100, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='managed_houses',
+                             null=True)
 
 
 class Document(models.Model):
@@ -93,7 +95,8 @@ class News(models.Model):
 
 class Announcement(models.Model):
     address = models.CharField("Адрес", max_length=100)
-    complex = models.ForeignKey(ResidentialComplex, on_delete=models.SET_NULL, null=True, related_name='flats')
+    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.SET_NULL, null=True,
+                                            related_name='flats')
     photo = models.ImageField(upload_to='announcements', null=True, blank=True)
 
     class FoundationDocument(models.TextChoices):
@@ -143,6 +146,8 @@ class Announcement(models.Model):
     in_favorites = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name='favorites')
     reject = models.BooleanField(default=False)
     reject_message = models.CharField(max_length=100, null=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='announcements',
+                             null=True)
 
 
 class AnnouncementShot(models.Model):
@@ -194,3 +199,13 @@ class Complaint(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='complaints', on_delete=models.CASCADE)
     description = models.TextField()
     rejected = models.BooleanField(default=False)
+
+
+class RequestToChest(models.Model):
+    residential_complex = models.ForeignKey(ResidentialComplex, related_name='requests', on_delete=models.CASCADE)
+    announcement = models.ForeignKey(Announcement, related_name='requests', on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def user(self):
+        return self.announcement.user

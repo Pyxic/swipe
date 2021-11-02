@@ -1,23 +1,37 @@
 import rest_framework.mixins
+from django.db.models import Count, Q
 from django.shortcuts import render, get_object_or_404
 
 # Create your views here.
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, status, generics, mixins
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
+from account.permissions import IsDeveloper, IsOwner, IsClient, IsAdminOrOwner, IsAdmin
 from building.exceptions import AlreadyExist
-from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint
+from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest
 from building.serializers import ResidentialComplexListSerializer, ResidentialComplexSerializer, \
     AnnouncementListSerializer, AnnouncementSerializer, GallerySerializer, PromotionSerializer, \
-    PromotionRetrieveSerializer, ComplaintSerializer, ComplaintRejectSerializer
+    PromotionRetrieveSerializer, ComplaintSerializer, ComplaintRejectSerializer, AnnouncementModerationSerializer, \
+    RequestToChestSerializer
 from building.services.filters import AnnouncementFilter
 
 
 class ResidentComplexViewSet(viewsets.ModelViewSet):
     view_tags = ['residential complex']
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [IsAuthenticated]
+        if self.action in ['create']:
+            permission_classes = [IsDeveloper]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrOwner]
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         return ResidentialComplex.objects.all()
@@ -28,14 +42,26 @@ class ResidentComplexViewSet(viewsets.ModelViewSet):
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'create']:
             return ResidentialComplexSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 class AnnouncementViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = AnnouncementFilter
     view_tags = ['announcement']
 
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        if self.action in ['create']:
+            permission_classes = [IsClient]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrOwner]
+        return [permission() for permission in permission_classes]
+
     def get_queryset(self):
-        return Announcement.objects.all().order_by('-created')
+        return Announcement.objects.filter(is_draft=True).order_by('-created')
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -43,16 +69,69 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'create']:
             return AnnouncementSerializer
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+
+class AnnouncementModerationAdminView(mixins.RetrieveModelMixin,
+                                      mixins.UpdateModelMixin,
+                                      mixins.ListModelMixin,
+                                      viewsets.GenericViewSet):
+    """
+    Admin can get list of posts with complains or not approve
+    """
+    permission_classes = [IsAdmin]
+    queryset = Announcement.objects.filter(is_draft=False, reject=False).order_by('-id')
+    # Filter only posts with complaints
+    serializer_class = AnnouncementSerializer
+    view_tags = ['admin']
+
+    def get_serializer_class(self):
+        if self.action in ('list', 'retrieve'):
+            return self.serializer_class
+        if self.action in ('update', 'partial_update'):
+            return AnnouncementModerationSerializer
+        return self.serializer_class
+
+    @action(detail=True, methods=['put', 'patch'])
+    def approve_announcement(self, request, pk=None):
+        announcement = self.get_object()
+        announcement.is_draft = True
+        announcement.reject = False
+        announcement.reject_message = None
+        announcement.save()
+        return Response({'status': 'announcement approved'})
+
+    @action(detail=True, methods=['patch'])
+    def reject_announcement(self, request, pk=None):
+        announcement = self.get_object()
+        serializer = AnnouncementModerationSerializer(data=request.data, instance=announcement)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'status': 'announcement rejected'})
+        else:
+            return Response(serializer.errors)
+
 
 class AnnouncementShotViewSet(viewsets.ModelViewSet):
     queryset = AnnouncementShot.objects.all()
     serializer_class = GallerySerializer
     view_tags = ['announcement']
 
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            permission_classes = [AllowAny]
+        if self.action in ['create']:
+            permission_classes = [IsClient]
+        if self.action in ['update', 'partial_update', 'destroy']:
+            permission_classes = [IsAdminOrOwner]
+        return [permission() for permission in permission_classes]
+
 
 class UserFavoritesViewSet(viewsets.ModelViewSet):
     queryset = Announcement.objects.filter(is_draft=True)
     view_tags = ['favorites']
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -87,6 +166,7 @@ class PromotionViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin,
     queryset = Promotion.objects.all()
     lookup_field = 'announcement_id'
     view_tags = ['promotion']
+    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -98,8 +178,40 @@ class ComplaintViewSet(viewsets.ModelViewSet):
     queryset = Complaint.objects.filter(rejected=False).order_by('-created')
     view_tags = ['complaint']
 
+    def get_permissions(self):
+        if self.action == 'create':
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [IsAdmin]
+        return [permission() for permission in permission_classes]
+
     def get_serializer_class(self):
-        if self.action in ['list', 'retrieve']:
+        if self.action in ['list', 'retrieve', 'create']:
             return ComplaintSerializer
         if self.action in ['update', 'partial_update']:
             return ComplaintRejectSerializer
+
+
+class RequestToChestCreateView(generics.CreateAPIView):
+    """Добавление клиентом квартиры в шахматку"""
+    serializer_class = RequestToChestSerializer
+    permission_classes = [IsOwner]
+    view_tags = ['client']
+
+
+class RequestToChestViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
+                            viewsets.GenericViewSet):
+    serializer_class = RequestToChestSerializer
+    permission_classes = [IsDeveloper]
+
+    def get_queryset(self):
+        return RequestToChest.objects.filter(residential_complex__user=self.request.user)
+
+    @action(detail=True, methods=['put', 'delete'])
+    def approve_request(self, request, pk=None):
+        request_to_chest = self.get_object()
+        announcement = request_to_chest.announcement
+        announcement.residential_complex = request_to_chest.residential_complex
+        announcement.save()
+        request_to_chest.delete()
+        return Response({"status": 'request to chest approved'})
