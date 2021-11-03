@@ -5,19 +5,20 @@ from django.shortcuts import render, get_object_or_404
 # Create your views here.
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets, status, generics, mixins
+from rest_framework import viewsets, status, generics, mixins, permissions
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from account.permissions import IsDeveloper, IsOwner, IsClient, IsAdminOrOwner, IsAdmin
+from account.permissions import IsDeveloper, IsOwner, IsClient, IsAdminOrOwner, IsAdmin, IsOwnerOrReadOnly
 from building.exceptions import AlreadyExist
-from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest
+from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest, \
+    News
 from building.serializers import ResidentialComplexListSerializer, ResidentialComplexSerializer, \
     AnnouncementListSerializer, AnnouncementSerializer, GallerySerializer, PromotionSerializer, \
     PromotionRetrieveSerializer, ComplaintSerializer, ComplaintRejectSerializer, AnnouncementModerationSerializer, \
-    RequestToChestSerializer
+    RequestToChestSerializer, NewsSerializer
 from building.services.filters import AnnouncementFilter
 
 
@@ -215,3 +216,17 @@ class RequestToChestViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, mi
         announcement.save()
         request_to_chest.delete()
         return Response({"status": 'request to chest approved'})
+
+
+class NewsViewSet(viewsets.ModelViewSet):
+    serializer_class = NewsSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    queryset = News.objects.all().order_by('-id')
+
+    def list(self, request, *args, **kwargs):
+        """ Filter news by residential_complex """
+        queryset = self.queryset.filter(residential_complex_id=request.query_params.get('residential_complex'))
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(data=serializer.data)
+
+

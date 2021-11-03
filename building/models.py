@@ -60,7 +60,7 @@ class ResidentialComplex(models.Model):
         ceramic = 'керамические блоки', _('керамические блоки')
 
     status = models.CharField(choices=StatusComplex.choices, max_length=20, null=True)
-    advantages = models.ManyToManyField(Advantage, null=True, blank=True)
+    advantages = models.ManyToManyField(Advantage, blank=True)
     house_type = models.CharField(choices=HouseType.choices, max_length=30, null=True)
     house_class = models.CharField(choices=HouseClass.choices, max_length=30, null=True)
     house_territory = models.CharField(choices=HouseTerritory.choices, max_length=30, null=True)
@@ -90,7 +90,11 @@ class Document(models.Model):
 class News(models.Model):
     title = models.CharField("Заголовок", max_length=100)
     description = models.TextField("Описание")
-    complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='news')
+    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='news')
+
+    @property
+    def user(self):
+        return self.residential_complex.user
 
 
 class Announcement(models.Model):
@@ -129,8 +133,8 @@ class Announcement(models.Model):
     layout = models.CharField(choices=AnnouncementLayout.choices, max_length=100)
     living_condition = models.CharField(choices=LivingCondition.choices, max_length=100)
     area = models.FloatField()
-    kitchen_area = models.FloatField()
-    has_balcony = models.BooleanField()
+    kitchen_area = models.FloatField(null=True)
+    has_balcony = models.BooleanField(default=False)
     heating_type = models.CharField(choices=ResidentialComplex.HouseHeating.choices, max_length=100, null=True)
     sewerage_type = models.CharField(choices=ResidentialComplex.HouseSewerage.choices, max_length=30, null=True)
     calculation_options = models.CharField(max_length=100, null=True)
@@ -148,6 +152,9 @@ class Announcement(models.Model):
     reject_message = models.CharField(max_length=100, null=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='announcements',
                              null=True)
+    frame = models.PositiveIntegerField(default=1)
+    section = models.PositiveIntegerField(default=1)
+    level = models.PositiveIntegerField(default=1)
 
 
 class AnnouncementShot(models.Model):

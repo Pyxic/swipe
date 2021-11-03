@@ -5,7 +5,8 @@ from generic_relations.serializers import GenericModelSerializer
 from rest_framework import serializers
 
 from account.models import User
-from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest
+from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest, \
+    News
 
 
 class ResidentialComplexListSerializer(serializers.ModelSerializer):
@@ -125,4 +126,22 @@ class RequestToChestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RequestToChest
+        fields = "__all__"
+
+    def validate(self, data):
+        residential_complex = data.get('residential_complex')
+        announcement = data.get('announcement')
+        if announcement.frame > residential_complex.frame_quantity:
+            raise serializers.ValidationError("frame of flat must be less than frame quantity of complex")
+        if announcement.section > residential_complex.section_quantity:
+            raise serializers.ValidationError("section of flat must be less than section quantity of complex")
+        if announcement.level > residential_complex.level_quantity:
+            raise serializers.ValidationError("level of flat must be less than level quantity of complex")
+        return data
+
+
+class NewsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = News
         fields = "__all__"
