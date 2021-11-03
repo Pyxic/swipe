@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from account.models import User
 from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest, \
-    News
+    News, Document
 
 
 class ResidentialComplexListSerializer(serializers.ModelSerializer):
@@ -144,4 +144,11 @@ class NewsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = News
+        fields = "__all__"
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Document
         fields = "__all__"

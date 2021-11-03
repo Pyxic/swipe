@@ -21,7 +21,7 @@ urlpatterns = [
         path('announcement_shot', views.AnnouncementShotViewSet.as_view({'get': 'list'})),
         path('announcement_shot/<int:pk>', views.AnnouncementShotViewSet.as_view({'get': 'retrieve'})),
         path('announcement_shot_create', views.AnnouncementShotViewSet.as_view({'post': 'create'})),
-        path('announcement_shot_delee/<int:pk>', views.AnnouncementShotViewSet.as_view({'delete': 'destroy'})),
+        path('announcement_shot_delete/<int:pk>', views.AnnouncementShotViewSet.as_view({'delete': 'destroy'})),
         path('favorites', views.UserFavoritesViewSet.as_view({'get': 'list'})),
         path('add_to_favorites', views.UserFavoritesViewSet.as_view({'post': 'create'})),
         path('remove_from_favorites', views.UserFavoritesViewSet.as_view({'delete': 'destroy'})),
@@ -54,4 +54,9 @@ urlpatterns = [
         path('news_create', views.NewsViewSet.as_view({'post': 'create'})),
         path('news_update/<int:pk>', views.NewsViewSet.as_view({'put': 'update', 'patch': 'partial_update'})),
         path('news_delete/<int:pk>', views.NewsViewSet.as_view({'delete': 'destroy'})),
+        path('document', views.DocumentViewSet.as_view({'get': 'list'})),
+        path('document/<int:pk>', views.DocumentViewSet.as_view({'get': 'retrieve'})),
+        path('document_create', views.DocumentViewSet.as_view({'post': 'create'})),
+        path('document_update/<int:pk>', views.DocumentViewSet.as_view({'put': 'update', 'patch': 'partial_update'})),
+        path('document_delete/<int:pk>', views.DocumentViewSet.as_view({'delete': 'destroy'})),
     ]

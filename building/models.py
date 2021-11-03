@@ -84,7 +84,11 @@ class ResidentialComplex(models.Model):
 
 class Document(models.Model):
     document = models.FileField(upload_to='house_documents')
-    house = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='documents')
+    residential_complex = models.ForeignKey(ResidentialComplex, on_delete=models.CASCADE, related_name='documents')
+
+    @property
+    def user(self):
+        return self.residential_complex.user
 
 
 class News(models.Model):

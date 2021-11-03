@@ -1,8 +1,10 @@
+from datetime import date
+
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from rest_framework.permissions import AllowAny
 
 from account.models import User
@@ -17,19 +19,22 @@ from account.serializers import RoleListSerializer, UserListSerializer, ClientUp
     NotaryDetailSerializer, ClientSerializer
 
 
-@method_decorator(name='get', decorator=swagger_auto_schema(tags=['user']))
+@method_decorator(name='get', decorator=swagger_auto_schema(tags=['admin']))
 class RoleListView(generics.ListAPIView):
     """Вывод списка ролей"""
     queryset = Role.objects.all()
     serializer_class = RoleListSerializer
 
 
-@method_decorator(name='update', decorator=swagger_auto_schema(tags=['client']))
-@method_decorator(name='partial_update', decorator=swagger_auto_schema(tags=['client']))
-@method_decorator(name='list', decorator=swagger_auto_schema(tags=['client']))
-@method_decorator(name='retrieve', decorator=swagger_auto_schema(tags=['client']))
-@method_decorator(name='destroy', decorator=swagger_auto_schema(tags=['client']))
+class AdminViewSet(viewsets.ReadOnlyModelViewSet):
+    view_tags = ['admin']
+    serializer_class = UserListSerializer
+    permission_classes = [IsAdmin]
+    queryset = User.objects.filter(is_superuser=True)
+
+
 class ClientViewSet(viewsets.ModelViewSet):
+    view_tags = ['client']
 
     def get_queryset(self):
         return User.objects.filter(role__name='клиент')
@@ -103,3 +108,29 @@ class DeveloperViewSet(viewsets.ModelViewSet):
             return UserListSerializer
         if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
             return ClientSerializer
+
+
+class ClientUpdateSubscriptionView(APIView):
+    permission_classes = (permissions.IsAuthenticated, IsOwner)
+    serializer_class = ClientUpdateSerializer
+    view_tags = ['client']
+
+    def patch(self, request, pk):
+        user = get_object_or_404(User, id=pk)
+        user.end_date = date.today().replace(month=1 if date.today().month // 12 == 1 else date.today().month + 1)
+        user.subscribed = True
+        user.save()
+        return Response({'pk': user.pk, 'subscribed': user.subscribed,
+                         'end_date': user.end_date.strftime('%Y-%m-%d')})
+
+
+class ChangeBanStatus(APIView):
+    permission_classes = (permissions.IsAuthenticated, IsAdmin)
+    view_tags = ['admin']
+
+    def patch(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        user.banned = not user.banned
+        user.save()
+        return Response({'pk': user.pk,
+                         'ban': user.banned}, status=status.HTTP_200_OK)

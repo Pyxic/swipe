@@ -41,7 +41,10 @@ class ClientSerializer(UserListSerializer):
         model = User
         fields = "__all__"
         extra_kwargs = {
-            "password": {"write_only": True}
+            "password": {"write_only": True},
+            "end_date": {"read_only": True},
+            "subscribed": {"read_only": True},
+            "ban": {"read_only": True}
         }
 
     def create(self, validated_data):
