@@ -7,7 +7,7 @@ from drf_yasg.utils import swagger_auto_schema
 from rest_framework import viewsets, permissions
 from rest_framework.permissions import AllowAny
 
-from account.models import User
+from account.models import User, UserFilter
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,7 +16,7 @@ from rest_framework import generics
 from account.models import Role
 from account.permissions import IsAdmin, IsOwner, IsAdminOrOwner, IsDeveloper
 from account.serializers import RoleListSerializer, UserListSerializer, ClientUpdateSerializer, \
-    NotaryDetailSerializer, ClientSerializer
+    NotaryDetailSerializer, ClientSerializer, UserFilterSerializer
 
 
 @method_decorator(name='get', decorator=swagger_auto_schema(tags=['admin']))
@@ -110,13 +110,15 @@ class DeveloperViewSet(viewsets.ModelViewSet):
             return ClientSerializer
 
 
-class ClientUpdateSubscriptionView(APIView):
+class ClientUpdateSubscriptionView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated, IsOwner)
     serializer_class = ClientUpdateSerializer
+    queryset = User.objects.filter(role__name='клиент')
     view_tags = ['client']
 
-    def patch(self, request, pk):
-        user = get_object_or_404(User, id=pk)
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.serializer_class(instance=user)
         user.end_date = date.today().replace(month=1 if date.today().month // 12 == 1 else date.today().month + 1)
         user.subscribed = True
         user.save()
@@ -134,3 +136,32 @@ class ChangeBanStatus(APIView):
         user.save()
         return Response({'pk': user.pk,
                          'ban': user.banned}, status=status.HTTP_200_OK)
+
+
+class UserFilterViewSet(viewsets.ModelViewSet):
+    """
+     User can save 'Announcement' filters and get them from db
+     """
+    permission_classes = (IsOwner,)
+    serializer_class = UserFilterSerializer
+    queryset = UserFilter.objects.all().order_by('-id')
+    view_tags = ['user']
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """
+        If user is subscribed - he doesnt have any restrictions
+        :param request:
+        :param args:
+        :param kwargs:
+        :return: Response
+        """
+        if request.user.subscribed:
+            return super().create(request, *args, **kwargs)
+        return Response({'Error': 'Your subscribe are finished. Please, extend your subscribe'},
+                        status=status.HTTP_400_BAD_REQUEST)

@@ -59,4 +59,11 @@ urlpatterns = [
         path('document_create', views.DocumentViewSet.as_view({'post': 'create'})),
         path('document_update/<int:pk>', views.DocumentViewSet.as_view({'put': 'update', 'patch': 'partial_update'})),
         path('document_delete/<int:pk>', views.DocumentViewSet.as_view({'delete': 'destroy'})),
+        # ADVANTAGES
+        path('advantage', views.AdvantageViewSet.as_view({'get': 'list'})),
+        path('advantage_update/<int:pk>', views.AdvantageViewSet.as_view({'put': 'update'})),
+        path('advantage_create', views.AdvantageViewSet.as_view({'post': 'create'})),
+        path('advantage_delete/<int:pk>', views.AdvantageViewSet.as_view({'delete': 'destroy'})),
+        path('residential_complex_add_advantage', views.ResidentialAdvantagesViewSet.as_view({'post': 'create'})),
+        path('residential_complex_delete_advantage', views.ResidentialAdvantagesViewSet.as_view({'delete': 'destroy'})),
     ]

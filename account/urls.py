@@ -18,5 +18,9 @@ urlpatterns = [
     path('developer/<int:pk>', views.DeveloperViewSet.as_view({'get': 'retrieve'})),
     path('developer_update/<int:pk>', views.DeveloperViewSet.as_view({'put': 'update', 'patch': 'partial_update'})),
     path('change_ban_status/<int:pk>', views.ChangeBanStatus.as_view()),
-    # path('client_create', views.ClientCreateView.as_view()),
+    path('user_filter', views.UserFilterViewSet.as_view({'get': 'list'})),
+    path('user_filter/<int:pk>', views.UserFilterViewSet.as_view({'get': 'retrieve'})),
+    path('user_filter_update/<int:pk>', views.UserFilterViewSet.as_view({'put': 'update', 'patch': 'partial_update'})),
+    path('user_filter_create', views.UserFilterViewSet.as_view({'post': 'create'})),
+    path('user_filter_delete/<int:pk>', views.UserFilterViewSet.as_view({'delete': 'destroy'})),
 ]

@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from account.models import User
 from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest, \
-    News, Document
+    News, Document, Advantage
 
 
 class ResidentialComplexListSerializer(serializers.ModelSerializer):
@@ -16,8 +16,32 @@ class ResidentialComplexListSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'price_for_meter', 'min_area', 'max_area', 'frame_quantity', 'address', 'user')
 
 
+class NewsSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = News
+        fields = "__all__"
+
+
+class DocumentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Document
+        fields = "__all__"
+
+
+class AdvantageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Advantage
+        fields = '__all__'
+
+
 class ResidentialComplexSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(slug_field='email', read_only=True)
+    news = NewsSerializer(read_only=True, many=True)
+    documents = DocumentSerializer(read_only=True, many=True)
+    advantages = AdvantageSerializer(read_only=True, many=True)
 
     class Meta:
         model = ResidentialComplex
@@ -138,17 +162,3 @@ class RequestToChestSerializer(serializers.ModelSerializer):
         if announcement.level > residential_complex.level_quantity:
             raise serializers.ValidationError("level of flat must be less than level quantity of complex")
         return data
-
-
-class NewsSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = News
-        fields = "__all__"
-
-
-class DocumentSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Document
-        fields = "__all__"

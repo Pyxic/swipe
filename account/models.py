@@ -61,3 +61,55 @@ class User(AbstractBaseUser, PermissionsMixin):
         Sends an email to this User.
         """
         send_mail(subject, message, from_email, [self.email], **kwargs)
+
+    @property
+    def user(self):
+        return User.objects.get(id=self.id)
+
+
+class UserFilter(models.Model):
+    market_choices = (
+        ('NOVOSTROY', _('Новострой')),
+        ('SECONDARY', _('Вторичный рынок')),
+        ('COTTAGES', _('Коттеджи')),
+        ('ALL', _('Все')),
+    )
+    number_of_rooms_choices = (
+        (1, _('1 комната')),
+        (2, _('2 комнаты')),
+        (3, _('3 комнаты')),
+        (4, _('4 комнаты')),
+        (5, _('Больше 4-х комнат'))
+    )
+    status_choices = (
+        ('FLATS', _('Квартиры')),
+        ('OFFICES', _('Офисы'))
+    )
+    payment_conditions_choices = (
+        ('MORTGAGE', _('Ипотека')),
+        ('CAPITAL', _('Материнский капитал')),
+        ('PAYMENT', _('Прямая оплата'))
+    )
+    state_choices = (
+        ('ROUGH', _('Черновая')),
+        ('READY', _('В жилом состоянии')),
+        ('RENOVATION', _('Требует ремонта'))
+    )
+    LIMIT = 3  # Max filters for unsubscribed users
+
+    name = models.CharField(max_length=100, blank=True, null=True)
+    user = models.ForeignKey(User, related_name='filters', on_delete=models.CASCADE)
+    market = models.CharField(choices=market_choices, default='ALL', max_length=9, blank=True, null=True)
+    type = models.CharField(max_length=10, blank=True, null=True)
+    status = models.CharField(choices=status_choices, default='FLATS', max_length=7, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    #  city stores as regular string because we get all locations from all houses
+    address = models.CharField(max_length=100, blank=True, null=True)
+    number_of_rooms = models.IntegerField(choices=number_of_rooms_choices, default=1,
+                                          blank=True, null=True)
+    min_price = models.IntegerField(blank=True, null=True)
+    max_price = models.IntegerField(blank=True, null=True)
+    min_square = models.FloatField(blank=True, null=True)
+    max_square = models.FloatField(blank=True, null=True)
+    payment_cond = models.CharField(choices=payment_conditions_choices, max_length=10, blank=True, null=True)
+    state = models.CharField(choices=state_choices, max_length=10, blank=True, null=True)

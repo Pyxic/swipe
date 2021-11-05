@@ -16,13 +16,13 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
 from account.permissions import IsDeveloper, IsOwner, IsClient, IsAdminOrOwner, IsAdmin, IsOwnerOrReadOnly
-from building.exceptions import AlreadyExist
+from building.exceptions import AlreadyExist, AdvantageAlreadyExist
 from building.models import ResidentialComplex, Announcement, AnnouncementShot, Promotion, Complaint, RequestToChest, \
-    News, Document
+    News, Document, Advantage
 from building.serializers import ResidentialComplexListSerializer, ResidentialComplexSerializer, \
     AnnouncementListSerializer, AnnouncementSerializer, GallerySerializer, PromotionSerializer, \
     PromotionRetrieveSerializer, ComplaintSerializer, ComplaintRejectSerializer, AnnouncementModerationSerializer, \
-    RequestToChestSerializer, NewsSerializer, DocumentSerializer
+    RequestToChestSerializer, NewsSerializer, DocumentSerializer, AdvantageSerializer
 from building.services.filters import AnnouncementFilter
 
 
@@ -257,3 +257,40 @@ class DocumentViewSet(viewsets.ModelViewSet):
             response = HttpResponse(file, content_type=mimetypes.guess_type(instance.document.name)[0])
             response['Content-Disposition'] = f'attachment; filename={escape_uri_path(file_name)}'
             return response
+
+
+class AdvantageViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAdmin]
+    serializer_class = AdvantageSerializer
+    queryset = Advantage.objects.all()
+    view_tags = ['admin']
+
+
+class ResidentialAdvantagesViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
+    queryset = ResidentialComplex.objects.all()
+    view_tags = ['residential complex']
+    permission_classes = [IsAuthenticated, IsOwner]
+    serializer_class = ResidentialComplexSerializer
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """check has already advantage in residential complex and add to favorites if false"""
+        residential_complex = get_object_or_404(ResidentialComplex, pk=request.data.get('residential_complex'))
+        advantage = get_object_or_404(Advantage, pk=request.data.get('advantage'))
+        serializer = self.get_serializer(residential_complex)
+        if advantage in residential_complex.advantages.all():
+            raise AdvantageAlreadyExist()
+        residential_complex.advantages.add(advantage)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """remove advantages from residential complex"""
+        residential_complex = get_object_or_404(ResidentialComplex, pk=request.data.get('residential_complex'))
+        advantage = get_object_or_404(Advantage, pk=request.data.get('advantage'))
+        serializer = self.get_serializer(residential_complex)
+        if advantage not in residential_complex.advantages.all():
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        residential_complex.advantages.remove(advantage)
+        return Response(serializer.data, status=status.HTTP_204_NO_CONTENT)
