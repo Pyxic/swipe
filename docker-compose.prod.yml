@@ -33,7 +33,9 @@ services:
       - web
   celery:
     restart: always
-    build: ./
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
     command: celery -A swipe  worker -l INFO
     volumes:
       - .:/usr/src/app/
@@ -46,7 +48,9 @@ services:
   redis:
     image: "redis:alpine"
   celery-beat:
-    build: ./
+    build:
+      context: ./
+      dockerfile: Dockerfile.prod
     command: celery -A swipe beat -l info
     volumes:
       - .:/usr/src/app/
