@@ -16,7 +16,7 @@ from rest_framework import generics
 from account.models import Role
 from account.permissions import IsAdmin, IsOwner, IsAdminOrOwner, IsDeveloper
 from account.serializers import RoleListSerializer, UserListSerializer, ClientUpdateSerializer, \
-    NotaryDetailSerializer, ClientSerializer, UserFilterSerializer
+    NotaryDetailSerializer, ClientSerializer, UserFilterSerializer, UserRoleSerializer
 
 
 @method_decorator(name='get', decorator=swagger_auto_schema(tags=['admin']))
@@ -24,6 +24,13 @@ class RoleListView(generics.ListAPIView):
     """Вывод списка ролей"""
     queryset = Role.objects.all()
     serializer_class = RoleListSerializer
+
+
+class UserRoleView(generics.RetrieveAPIView):
+    """Вывод роли пользователя"""
+    queryset = User.objects.all()
+    serializer_class = UserRoleSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class AdminViewSet(viewsets.ReadOnlyModelViewSet):

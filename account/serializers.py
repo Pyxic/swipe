@@ -184,3 +184,10 @@ class UserFilterSerializer(serializers.Serializer):
             data['name'] = instance.name
 
         return data
+
+
+class UserRoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ('role',)
