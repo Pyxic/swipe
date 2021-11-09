@@ -4,6 +4,7 @@ from account import views
 
 urlpatterns = [
     path('role_list', views.RoleListView.as_view()),
+    path('user_role/<int:pk>', views.UserRoleView.as_view()),
     path('admin', views.AdminViewSet.as_view({'get': 'list'})),
     path('admin/<int:pk>', views.AdminViewSet.as_view({'get': 'retrieve'})),
     path('client', views.ClientViewSet.as_view({'get': 'list'})),
