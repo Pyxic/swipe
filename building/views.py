@@ -79,6 +79,20 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         return serializer.save(user=self.request.user)
 
 
+class UserAnnouncementViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [IsOwner]
+    view_tags = ['announcement']
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return AnnouncementListSerializer
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'create']:
+            return AnnouncementSerializer
+
+    def get_queryset(self):
+        return Announcement.objects.filter(user=self.request.user)
+
+
 class AnnouncementModerationAdminView(mixins.RetrieveModelMixin,
                                       mixins.UpdateModelMixin,
                                       mixins.ListModelMixin,

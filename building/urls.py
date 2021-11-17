@@ -22,6 +22,7 @@ urlpatterns = [
         path('announcement_shot/<int:pk>', views.AnnouncementShotViewSet.as_view({'get': 'retrieve'})),
         path('announcement_shot_create', views.AnnouncementShotViewSet.as_view({'post': 'create'})),
         path('announcement_shot_delete/<int:pk>', views.AnnouncementShotViewSet.as_view({'delete': 'destroy'})),
+        path('user_announcement', views.UserAnnouncementViewSet.as_view({'get': 'list'})),
         path('favorites', views.UserFavoritesViewSet.as_view({'get': 'list'})),
         path('add_to_favorites', views.UserFavoritesViewSet.as_view({'post': 'create'})),
         path('remove_from_favorites', views.UserFavoritesViewSet.as_view({'delete': 'destroy'})),
